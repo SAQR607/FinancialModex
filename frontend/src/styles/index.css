@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-white text-modex-dark font-sans;
+    font-family: 'Inter', 'Frutiger LT Arabic', Arial, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-modex-light text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply bg-modex-teal text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-modex-light text-modex-light px-6 py-3 rounded-lg font-semibold hover:bg-modex-light hover:text-white transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-modex-light focus:border-transparent outline-none transition-all;
+  }
+  
+  .gradient-bg {
+    @apply bg-gradient-to-br from-modex-dark via-modex-light to-modex-teal;
+  }
+}
+
