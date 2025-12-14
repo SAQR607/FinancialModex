@@ -11,6 +11,7 @@ export default {
         'modex-light': '#446ED0',
         'modex-teal': '#40A0AD',
         'modex-white': '#FFFFFF',
+        'border': '#E5E7EB',
       },
       fontFamily: {
         'stolzl': ['Stolzl', 'sans-serif'],
