@@ -55,20 +55,16 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Serve static files (for uploads and frontend build)
+// Ensure directories exist
 const uploadsPath = path.join(__dirname, '../uploads');
 const publicPath = path.join(__dirname, '../public');
 
-// Ensure directories exist
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
 if (!fs.existsSync(publicPath)) {
   fs.mkdirSync(publicPath, { recursive: true });
 }
-
-app.use('/uploads', express.static(uploadsPath));
-app.use(express.static(publicPath));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -85,7 +81,11 @@ app.use('/api/judge', judgeRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Serve frontend for all other routes (SPA)
+// Serve static files (for uploads and frontend build)
+app.use('/uploads', express.static(uploadsPath));
+app.use(express.static(path.join(__dirname, '../public')));
+
+// SPA fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
