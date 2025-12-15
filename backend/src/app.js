@@ -6,10 +6,15 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config();
 
-const { testConnection, sequelize } = require('./config/database');
+// Load and validate environment variables FIRST
+// This must be imported before any other config files
+require('./config/env');
+
+const { testConnection, sequelize, isDatabaseConfigValid } = require('./config/database');
+const { validation, getMissingVars } = require('./config/env');
 const errorHandler = require('./middleware/errorHandler');
+const packageJson = require('../package.json');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -99,12 +104,15 @@ if (!fs.existsSync(publicPath)) {
 
 // Health check
 app.get('/api/health', async (req, res) => {
+  const missingVars = getMissingVars();
   const healthData = {
     serverStatus: 'running',
     timestamp: new Date().toISOString(),
+    version: packageJson.version,
     database: {
       connected: false,
-      error: null
+      error: null,
+      configValid: isDatabaseConfigValid()
     },
     environment: {
       NODE_ENV: process.env.NODE_ENV || 'not set',
@@ -114,16 +122,22 @@ app.get('/api/health', async (req, res) => {
       PORT: process.env.PORT || 3000
     },
     emailService: 'hidden for security',
-    jwtStatus: process.env.JWT_SECRET ? 'available' : 'missing'
+    jwtStatus: process.env.JWT_SECRET ? 'available' : 'missing',
+    missingEnvironmentVariables: missingVars.length > 0 ? missingVars : null
   };
 
-  // Test database connection
-  try {
-    await sequelize.authenticate();
-    healthData.database.connected = true;
-  } catch (error) {
+  // Test database connection only if sequelize instance exists
+  if (sequelize) {
+    try {
+      await sequelize.authenticate();
+      healthData.database.connected = true;
+    } catch (error) {
+      healthData.database.connected = false;
+      healthData.database.error = error.message;
+    }
+  } else {
     healthData.database.connected = false;
-    healthData.database.error = error.message;
+    healthData.database.error = 'Database configuration invalid or missing';
   }
 
   res.json(healthData);
@@ -156,8 +170,12 @@ app.use(errorHandler);
 setupChatSocket(io);
 setupWebRTC(io);
 
-// Database connection test
-testConnection();
+// Database connection test (only if config is valid)
+if (isDatabaseConfigValid()) {
+  testConnection();
+} else {
+  console.error('⚠️  Database connection test skipped due to invalid configuration');
+}
 
 // Start server
 const PORT = process.env.PORT || 3000;
@@ -165,6 +183,11 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.IO server ready`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📦 App Version: ${packageJson.version}`);
+  
+  if (!validation.valid) {
+    console.warn('⚠️  Server started with missing environment variables. Some features may not work.');
+  }
 });
 
 module.exports = app;

@@ -1,26 +1,45 @@
 const { Sequelize } = require('sequelize');
-require('dotenv').config();
+const { isDatabaseConfigValid, getMissingVars, getEnv } = require('./env');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS,
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    dialect: 'mysql',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+let sequelize = null;
+
+// Only create Sequelize instance if database configuration is valid
+if (isDatabaseConfigValid()) {
+  // Support both DB_PASSWORD and DB_PASS for backward compatibility
+  const dbPassword = process.env.DB_PASSWORD || process.env.DB_PASS;
+  
+  sequelize = new Sequelize(
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    dbPassword,
+    {
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 3306,
+      dialect: 'mysql',
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      }
     }
-  }
-);
+  );
+  console.log('✅ Database configuration loaded');
+} else {
+  const missing = getMissingVars().filter(v => v.startsWith('DB_'));
+  console.error('❌ Database connection skipped due to invalid configuration');
+  console.error('   Missing database variables:', missing.join(', '));
+}
 
 // Test connection
 const testConnection = async () => {
+  // Don't attempt connection if Sequelize instance wasn't created
+  if (!sequelize) {
+    console.error('⚠️  Cannot test database connection: configuration invalid');
+    return;
+  }
+
   try {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
@@ -39,9 +58,9 @@ const testConnection = async () => {
   } catch (error) {
     console.error('❌ Unable to connect to the database:', error.message);
     console.error('Database config:', {
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
+      host: process.env.DB_HOST || '(empty)',
+      database: process.env.DB_NAME || '(empty)',
+      user: process.env.DB_USER || '(empty)',
       port: process.env.DB_PORT || 3306
     });
     // Don't exit in production, let the app handle it gracefully
@@ -51,5 +70,5 @@ const testConnection = async () => {
   }
 };
 
-module.exports = { sequelize, testConnection };
+module.exports = { sequelize, testConnection, isDatabaseConfigValid };
 
