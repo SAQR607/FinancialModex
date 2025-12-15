@@ -8,20 +8,36 @@ const generateToken = (userId) => {
 };
 
 const register = async (email, password, fullName) => {
-  const existingUser = await User.findOne({ where: { email } });
-  if (existingUser) {
-    throw new Error('Email already registered');
+  console.log('[AUTH SERVICE] Register called with:', { email, fullName, passwordLength: password?.length });
+  
+  try {
+    console.log('[AUTH SERVICE] Checking for existing user...');
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      console.log('[AUTH SERVICE] User already exists:', email);
+      throw new Error('Email already registered');
+    }
+
+    console.log('[AUTH SERVICE] Creating new user...');
+    const user = await User.create({
+      email,
+      password,
+      full_name: fullName,
+      role: 'TEAM_MEMBER'
+    });
+    console.log('[AUTH SERVICE] User created successfully:', user.id);
+
+    const token = generateToken(user.id);
+    console.log('[AUTH SERVICE] Token generated for user:', user.id);
+    return { user: user.toJSON(), token };
+  } catch (error) {
+    console.error('[AUTH SERVICE] Error in register:', {
+      name: error.name,
+      message: error.message,
+      original: error.original
+    });
+    throw error;
   }
-
-  const user = await User.create({
-    email,
-    password,
-    full_name: fullName,
-    role: 'TEAM_MEMBER'
-  });
-
-  const token = generateToken(user.id);
-  return { user: user.toJSON(), token };
 };
 
 const login = async (email, password) => {
