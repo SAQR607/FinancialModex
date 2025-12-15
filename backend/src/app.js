@@ -36,7 +36,8 @@ if (!envPath) {
   } else if (result.parsed) {
     console.log('✅ Loaded .env from default location (current directory)');
   } else {
-    console.warn('⚠️  No .env file found. Searched paths:', possiblePaths.join(', '));
+    console.warn('⚠️  Environment variables not loaded from Hostinger. Using .env file.');
+    console.warn('   No .env file found. Searched paths:', possiblePaths.join(', '));
     console.warn('   Using system environment variables only.');
   }
 }

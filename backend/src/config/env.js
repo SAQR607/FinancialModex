@@ -59,14 +59,16 @@ const validateEnv = () => {
 const validation = validateEnv();
 
 /**
- * Log missing variables
+ * Log missing variables with clear warnings
  */
 if (!validation.valid) {
-  console.error('❌ Missing required environment variables:');
+  console.error('\n❌ WARNING: Missing required environment variables:');
   validation.missing.forEach(varName => {
     console.error(`   - ${varName}`);
   });
   console.error('\n⚠️  Application may not function correctly without these variables.');
+  console.error('⚠️  The backend will NOT fall back to localhost, 127.0.0.1, or ::1.');
+  console.error('⚠️  Please set all required variables in your .env file or environment variables.\n');
 }
 
 /**
