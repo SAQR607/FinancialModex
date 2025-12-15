@@ -2,6 +2,12 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcryptjs');
 
+// Validate sequelize is available before defining model
+if (!sequelize) {
+  console.error('[USER MODEL] CRITICAL: Sequelize instance is null. Database connection not configured.');
+  throw new Error('Database connection is not available. Cannot define User model.');
+}
+
 const User = sequelize.define('User', {
   id: {
     type: DataTypes.INTEGER.UNSIGNED,

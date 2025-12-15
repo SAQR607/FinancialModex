@@ -51,16 +51,44 @@ const registerUser = async (req, res, next) => {
 
 const loginUser = async (req, res, next) => {
   try {
+    // Log incoming request
+    log('info', 'Login request received', { 
+      email: req.body?.email,
+      hasPassword: !!req.body?.password 
+    });
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      const validationErrors = errors.array();
+      log('warn', 'Login validation errors', { validationErrors });
+      return res.status(400).json({ errors: validationErrors });
     }
 
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      log('warn', 'Login missing required fields', { 
+        hasEmail: !!email, 
+        hasPassword: !!password 
+      });
+      return res.status(400).json({ error: 'Missing required fields: email, password' });
+    }
+
+    log('info', 'Calling login service', { email });
     const result = await login(email, password);
+    log('info', 'Login successful', { email, userId: result.user?.id });
     res.json(result);
   } catch (error) {
-    res.status(401).json({ error: error.message });
+    // Log login errors
+    log('error', 'Login error occurred', {
+      errorName: error.name,
+      errorMessage: error.message,
+      email: req.body?.email
+    });
+    
+    // Return appropriate status code
+    const statusCode = error.message === 'Invalid credentials' ? 401 : 500;
+    res.status(statusCode).json({ error: error.message });
   }
 };
 

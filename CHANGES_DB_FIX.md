@@ -168,3 +168,4 @@ The `/api/health` endpoint now returns:
 - All validation happens at startup for early error detection
 - Health endpoint provides real-time diagnostic information
 
+
