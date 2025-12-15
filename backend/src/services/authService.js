@@ -34,18 +34,22 @@ const register = async (email, password, fullName) => {
   }
   
   try {
-    // Step 1: Check for existing user
-    console.log('[REGISTER] Step 1: Checking for existing user with email:', email);
-    const existingUser = await User.findOne({ where: { email } });
+    // Normalize email FIRST (before any database operations)
+    const normalizedEmail = email.trim().toLowerCase();
+    console.log('[REGISTER] Normalized email:', normalizedEmail);
+    
+    // Step 1: Check for existing user with NORMALIZED email
+    console.log('[REGISTER] Step 1: Checking for existing user with email:', normalizedEmail);
+    const existingUser = await User.findOne({ where: { email: normalizedEmail } });
     if (existingUser) {
-      console.log('[REGISTER] FAILED: User already exists with email:', email);
+      console.log('[REGISTER] FAILED: User already exists with email:', normalizedEmail);
       throw new Error('Email already registered');
     }
     console.log('[REGISTER] Step 1: No existing user found, proceeding...');
 
     // Step 2: Validate input
     console.log('[REGISTER] Step 2: Validating input data');
-    if (!email || !email.trim()) {
+    if (!normalizedEmail || normalizedEmail.length === 0) {
       throw new Error('Email is required');
     }
     if (!password || password.length < 6) {
@@ -59,10 +63,10 @@ const register = async (email, password, fullName) => {
     // Step 3: Create user (password will be hashed by beforeCreate hook)
     console.log('[REGISTER] Step 3: Creating new user in database...');
     console.log('[REGISTER] SQL Query: INSERT INTO users (email, password, full_name, role) VALUES (?, ?, ?, ?)');
-    console.log('[REGISTER] Parameters: email=' + email + ', full_name=' + fullName + ', role=TEAM_MEMBER, password=[will be hashed]');
+    console.log('[REGISTER] Parameters: email=' + normalizedEmail + ', full_name=' + fullName.trim() + ', role=TEAM_MEMBER, password=[will be hashed]');
     
     const user = await User.create({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail, // Use normalized email
       password: password, // Will be hashed by beforeCreate hook
       full_name: fullName.trim(),
       role: 'TEAM_MEMBER'
