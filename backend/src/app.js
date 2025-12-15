@@ -11,8 +11,8 @@ const fs = require('fs');
 // This must be imported before any other config files
 require('./config/env');
 
-const { testConnection, sequelize, isDatabaseConfigValid } = require('./config/database');
-const { validation, getMissingVars } = require('./config/env');
+const { testConnection, isDatabaseConfigValid } = require('./config/database');
+const { validation } = require('./config/env');
 const errorHandler = require('./middleware/errorHandler');
 const packageJson = require('../package.json');
 
@@ -26,6 +26,7 @@ const judgeRoutes = require('./routes/judgeRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const debugRoutes = require('./routes/debugRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 
 // Socket handlers
 const setupChatSocket = require('./sockets/chatSocket');
@@ -102,47 +103,6 @@ if (!fs.existsSync(publicPath)) {
   fs.mkdirSync(publicPath, { recursive: true });
 }
 
-// Health check
-app.get('/api/health', async (req, res) => {
-  const missingVars = getMissingVars();
-  const healthData = {
-    serverStatus: 'running',
-    timestamp: new Date().toISOString(),
-    version: packageJson.version,
-    database: {
-      connected: false,
-      error: null,
-      configValid: isDatabaseConfigValid()
-    },
-    environment: {
-      NODE_ENV: process.env.NODE_ENV || 'not set',
-      DB_HOST: process.env.DB_HOST ? (process.env.DB_HOST.length > 3 ? `${process.env.DB_HOST.substring(0, 3)}***` : '***') : 'not set',
-      DB_USER: process.env.DB_USER ? (process.env.DB_USER.length > 3 ? `${process.env.DB_USER.substring(0, 3)}***` : '***') : 'not set',
-      DB_NAME: process.env.DB_NAME || 'not set',
-      PORT: process.env.PORT || 3000
-    },
-    emailService: 'hidden for security',
-    jwtStatus: process.env.JWT_SECRET ? 'available' : 'missing',
-    missingEnvironmentVariables: missingVars.length > 0 ? missingVars : null
-  };
-
-  // Test database connection only if sequelize instance exists
-  if (sequelize) {
-    try {
-      await sequelize.authenticate();
-      healthData.database.connected = true;
-    } catch (error) {
-      healthData.database.connected = false;
-      healthData.database.error = error.message;
-    }
-  } else {
-    healthData.database.connected = false;
-    healthData.database.error = 'Database configuration invalid or missing';
-  }
-
-  res.json(healthData);
-});
-
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/competitions', competitionRoutes);
@@ -153,6 +113,7 @@ app.use('/api/judge', judgeRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api', healthRoutes);
 
 // Serve static files (for uploads and frontend build)
 app.use('/uploads', express.static(uploadsPath));
