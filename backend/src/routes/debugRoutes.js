@@ -4,6 +4,15 @@ const { User } = require('../models');
 const { sequelize } = require('../config/database');
 const { getLogs } = require('../utils/logger');
 
+// Debug route for environment variables (no authentication required)
+router.get('/env', (req, res) => {
+  res.json({
+    dbHostSet: !!(process.env.DB_HOST && process.env.DB_HOST.trim() !== ''),
+    dbUserSet: !!(process.env.DB_USER && process.env.DB_USER.trim() !== ''),
+    dbNameSet: !!(process.env.DB_NAME && process.env.DB_NAME.trim() !== '')
+  });
+});
+
 // Debug route for registration status (no authentication required)
 router.get('/registration-status', async (req, res) => {
   try {

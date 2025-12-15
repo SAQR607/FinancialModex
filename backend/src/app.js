@@ -1,15 +1,63 @@
+// ============================================================================
+// CRITICAL: Load environment variables FIRST before ANY other imports
+// ============================================================================
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
+
+// Try to load .env from multiple possible locations (Hostinger compatibility)
+let envPath = null;
+const possiblePaths = [
+  path.resolve(__dirname, '../.env'),           // backend/.env (most common)
+  path.resolve(__dirname, '../../.env'),         // Project root (fallback)
+  path.resolve(process.cwd(), '.env'),          // Current working directory
+  path.join(process.cwd(), 'backend', '.env')   // Backend subdirectory
+];
+
+// Find and load .env file
+for (const possiblePath of possiblePaths) {
+  if (fs.existsSync(possiblePath)) {
+    envPath = possiblePath;
+    const result = require('dotenv').config({ path: possiblePath, override: true });
+    if (result.error) {
+      console.error(`❌ Error loading .env from ${possiblePath}:`, result.error.message);
+    } else {
+      console.log(`✅ Loaded .env from: ${possiblePath}`);
+      break;
+    }
+  }
+}
+
+// If no .env file found, try default location
+if (!envPath) {
+  const result = require('dotenv').config({ override: true });
+  if (result.error && result.error.code !== 'ENOENT') {
+    console.warn('⚠️  Error loading .env:', result.error.message);
+  } else if (result.parsed) {
+    console.log('✅ Loaded .env from default location (current directory)');
+  } else {
+    console.warn('⚠️  No .env file found. Searched paths:', possiblePaths.join(', '));
+    console.warn('   Using system environment variables only.');
+  }
+}
+
+// Log environment variable status for debugging
+console.log('[ENV DEBUG] Environment variables status:');
+console.log(`  DB_HOST: ${process.env.DB_HOST ? 'SET (' + process.env.DB_HOST.substring(0, 3) + '***)' : 'MISSING'}`);
+console.log(`  DB_USER: ${process.env.DB_USER ? 'SET (' + process.env.DB_USER.substring(0, 3) + '***)' : 'MISSING'}`);
+console.log(`  DB_NAME: ${process.env.DB_NAME ? 'SET (' + process.env.DB_NAME + ')' : 'MISSING'}`);
+console.log(`  DB_PASSWORD: ${(process.env.DB_PASSWORD || process.env.DB_PASS) ? 'SET' : 'MISSING'}`);
+console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'MISSING'}`);
+
+// Now load and validate environment variables
+require('./config/env');
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
-const fs = require('fs');
-
-// Load and validate environment variables FIRST
-// This must be imported before any other config files
-require('./config/env');
 
 const { testConnection, isDatabaseConfigValid } = require('./config/database');
 const { validation } = require('./config/env');

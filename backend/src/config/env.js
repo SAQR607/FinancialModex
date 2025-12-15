@@ -1,10 +1,7 @@
-const path = require('path');
-const fs = require('fs');
-require('dotenv').config();
-
 /**
- * Environment Variable Loader with Path Detection
- * Handles Hostinger and other production environments where .env path may vary
+ * Environment Variable Loader and Validator
+ * NOTE: dotenv.config() should be called BEFORE this module is required
+ * This module only validates and provides utilities for environment variables
  */
 
 // Define required environment variables
@@ -33,37 +30,8 @@ const OPTIONAL_VARS = {
   'DEBUG': 'false'
 };
 
-// Try to load .env from multiple possible locations
-let envPath = null;
-const possiblePaths = [
-  path.resolve(__dirname, '../../.env'),        // Backend root (most common)
-  path.resolve(__dirname, '../../../.env'),    // Project root (fallback)
-  path.resolve(process.cwd(), '.env'),         // Current working directory
-  path.join(process.cwd(), 'backend', '.env') // Backend subdirectory
-];
-
-// Find the first existing .env file
-for (const possiblePath of possiblePaths) {
-  if (fs.existsSync(possiblePath)) {
-    envPath = possiblePath;
-    break;
-  }
-}
-
-// Load .env if found
-if (envPath) {
-  require('dotenv').config({ path: envPath });
-  console.log(`✅ Loaded .env from: ${envPath}`);
-} else {
-  // Try default dotenv behavior (current directory)
-  const result = require('dotenv').config();
-  if (result.error) {
-    console.warn('⚠️  No .env file found. Using system environment variables only.');
-    console.warn('   Searched paths:', possiblePaths.join(', '));
-  } else if (result.parsed) {
-    console.log('✅ Loaded .env from default location (current directory)');
-  }
-}
+// Note: dotenv.config() is called in app.js BEFORE this module is loaded
+// This module only validates and provides utilities
 
 /**
  * Validate required environment variables
@@ -136,7 +104,6 @@ const getEnv = (varName, defaultValue = '') => {
 };
 
 module.exports = {
-  envPath,
   REQUIRED_VARS,
   OPTIONAL_VARS,
   validation,
