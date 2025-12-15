@@ -1,40 +1,50 @@
 const { register, login } = require('../services/authService');
 const { validationResult } = require('express-validator');
+const { log } = require('../utils/logger');
 
 const registerUser = async (req, res, next) => {
   try {
-    console.log('[REGISTER] Incoming request:', {
-      body: req.body,
-      headers: {
-        'content-type': req.headers['content-type'],
-        'origin': req.headers.origin
-      }
-    });
+    // Log incoming body keys (NOT values)
+    const bodyKeys = req.body ? Object.keys(req.body) : [];
+    log('info', 'Registration request received', { bodyKeys });
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('[REGISTER] Validation errors:', errors.array());
-      return res.status(400).json({ errors: errors.array() });
+      const validationErrors = errors.array();
+      log('warn', 'Registration validation errors', { validationErrors });
+      return res.status(400).json({ errors: validationErrors });
     }
 
     const { email, password, full_name } = req.body;
-    console.log('[REGISTER] Extracted fields:', { email, full_name, passwordLength: password?.length });
 
     if (!email || !password || !full_name) {
-      console.log('[REGISTER] Missing required fields');
+      log('warn', 'Registration missing required fields', { 
+        hasEmail: !!email, 
+        hasPassword: !!password, 
+        hasFullName: !!full_name 
+      });
       return res.status(400).json({ error: 'Missing required fields: email, password, full_name' });
     }
 
-    console.log('[REGISTER] Calling register service...');
+    log('info', 'Calling register service', { email, hasPassword: !!password, hasFullName: !!full_name });
     const result = await register(email, password, full_name);
-    console.log('[REGISTER] Registration successful for:', email);
+    log('info', 'Registration successful', { email, userId: result.user?.id });
     res.status(201).json(result);
   } catch (error) {
-    console.error('[REGISTER] Error occurred:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
+    // Log DB insert errors or other errors
+    const isDbError = error.name && (
+      error.name === 'SequelizeUniqueConstraintError' ||
+      error.name === 'SequelizeDatabaseError' ||
+      error.name === 'SequelizeValidationError'
+    );
+    
+    log('error', 'Registration error occurred', {
+      errorName: error.name,
+      errorMessage: error.message,
+      isDbError,
+      ...(isDbError && { originalError: error.original?.message })
     });
+    
     next(error);
   }
 };

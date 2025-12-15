@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-const { testConnection } = require('./config/database');
+const { testConnection, sequelize } = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
 // Routes
@@ -20,6 +20,7 @@ const qualificationRoutes = require('./routes/qualificationRoutes');
 const judgeRoutes = require('./routes/judgeRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const debugRoutes = require('./routes/debugRoutes');
 
 // Socket handlers
 const setupChatSocket = require('./sockets/chatSocket');
@@ -97,8 +98,35 @@ if (!fs.existsSync(publicPath)) {
 }
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  const healthData = {
+    serverStatus: 'running',
+    timestamp: new Date().toISOString(),
+    database: {
+      connected: false,
+      error: null
+    },
+    environment: {
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      DB_HOST: process.env.DB_HOST ? (process.env.DB_HOST.length > 3 ? `${process.env.DB_HOST.substring(0, 3)}***` : '***') : 'not set',
+      DB_USER: process.env.DB_USER ? (process.env.DB_USER.length > 3 ? `${process.env.DB_USER.substring(0, 3)}***` : '***') : 'not set',
+      DB_NAME: process.env.DB_NAME || 'not set',
+      PORT: process.env.PORT || 3000
+    },
+    emailService: 'hidden for security',
+    jwtStatus: process.env.JWT_SECRET ? 'available' : 'missing'
+  };
+
+  // Test database connection
+  try {
+    await sequelize.authenticate();
+    healthData.database.connected = true;
+  } catch (error) {
+    healthData.database.connected = false;
+    healthData.database.error = error.message;
+  }
+
+  res.json(healthData);
 });
 
 // API Routes
@@ -110,6 +138,7 @@ app.use('/api/qualification', qualificationRoutes);
 app.use('/api/judge', judgeRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Serve static files (for uploads and frontend build)
 app.use('/uploads', express.static(uploadsPath));
